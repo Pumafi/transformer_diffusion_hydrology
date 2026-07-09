@@ -33,7 +33,7 @@ class MPSWrapper:
             self.covariate_names = None
 
         self.nb_stations = len(indices_step1)
-        self.nb_neighboors = 10
+        self.nb_neighboors = 12
 
     def handle_covariates(self, covariates):
 

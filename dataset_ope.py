@@ -106,6 +106,42 @@ class OPE_Dataset(Dataset):
     def __len__(self):
         return len(self.use_index)
 
+class OPEScaler():
+    def __init__(self, dataloader, device):
+        self.mean = torch.Tensor(dataloader.dataset.mean_data).to(device)[None, :, None]
+        self.std = torch.Tensor(dataloader.dataset.std_data).to(device)[None, :, None]
+
+    def normalize(self, data):
+        if len(data.shape) < 3:
+            data = data[None, :, :]
+            mask = mask[None, :, :]
+        
+        mean = self.mean
+        std = self.std
+        if len(data.shape) > 3:
+            mean = mean[:, None, :, :].repeat([data.shape[0], data.shape[1], 1, data.shape[-1]])
+            std = std[:, None, :, :].repeat([data.shape[0], data.shape[1], 1, data.shape[-1]])
+        else:
+            mean = mean.repeat([data.shape[0], 1, data.shape[-1]])
+            std = std.repeat([data.shape[0], 1, data.shape[-1]])
+            
+        return (data - mean) / std
+
+    def scale_back(self, data):
+        if len(data.shape) < 3:
+            data = data[None, :, :]
+
+        mean = self.mean
+        std = self.std
+        if len(data.shape) > 3:
+            mean = mean[:, None, :, :].repeat([data.shape[0], data.shape[1], 1, data.shape[-1]])
+            std = std[:, None, :, :].repeat([data.shape[0], data.shape[1], 1, data.shape[-1]])
+        else:
+            mean = mean.repeat([data.shape[0], 1, data.shape[-1]])
+            std = std.repeat([data.shape[0], 1, data.shape[-1]])
+            
+        return (data * std + mean)
+
 def get_dataloader(path_sagd_training_data, device, path_covariate_data=None, batch_size=8, long_data=False, safran_covariates=False, absolute_timepoints=True, silent=False):
     
     dataset = OPE_Dataset(path_sagd_training_data, path_covariate_data, mode='train', safran_covariates=safran_covariates, absolute_timepoints=absolute_timepoints)
@@ -132,8 +168,4 @@ def get_dataloader(path_sagd_training_data, device, path_covariate_data=None, ba
     test_loader = DataLoader(
         test_dataset, batch_size=batch_size, shuffle=0)
 
-    # These are not used, but we return them for potential use in scaling the model outputs back to the original scale if needed.
-    scaler = torch.from_numpy(dataset.std_data).to(device).float()
-    mean_scaler = torch.from_numpy(dataset.mean_data).to(device).float()
-
-    return train_loader, valid_loader, test_loader, scaler, mean_scaler
+    return train_loader, valid_loader, test_loader

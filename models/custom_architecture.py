@@ -248,7 +248,7 @@ class ResidualBlock(nn.Module):
         cond_proj = self.cond_dropout(cond_proj)
         cond_proj = cond_proj.reshape(B, 2*self.chanels, K, L)
         gamma, beta = torch.chunk(cond_proj, 2, dim=1)
-        y = (1 + gamma) * y + beta
+        y = (1 + gamma) * y + beta 
 
         y = self.scaling_conv(y)
         y = y.transpose(1, 3)
@@ -265,7 +265,6 @@ class ResidualBlock(nn.Module):
         y = self.forward_time(y, base_shape)
         y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
         y = self.mid_projection(y)  # (B,2*channel,K*L)
-
 
         gate, filter = torch.chunk(y, 2, dim=1)
         y = torch.sigmoid(gate) * torch.tanh(filter)  # (B,channel,K*L)

@@ -189,14 +189,15 @@ class CSDI_base(nn.Module):
         return imputed_samples
     
     def impute(self, observed_data, cond_mask, n_samples, timestamps=None):
-        observed_tp = timestamps if timestamps is not None else np.tile(np.arange(observed_data.shape[1]), (observed_data.shape[0], 1))
-        observed_data = observed_data.permute(0, 2, 1)
-        cond_mask = cond_mask.permute(0, 2, 1)
-        
-        observed_tp = torch.tensor(observed_tp, dtype=torch.float32).to(self.device)
-        side_info = self.get_side_info(observed_tp, cond_mask)
-        samples = self.__impute(observed_data, cond_mask, side_info, n_samples)
-        samples = samples * (1 - cond_mask[:, None, :, :]) + observed_data[:, None, :, :] * cond_mask[:, None, :, :]
+        with torch.no_grad():
+            observed_tp = timestamps if timestamps is not None else np.tile(np.arange(observed_data.shape[1]), (observed_data.shape[0], 1))
+            observed_data = observed_data.permute(0, 2, 1)
+            cond_mask = cond_mask.permute(0, 2, 1)
+            
+            observed_tp = torch.tensor(observed_tp, dtype=torch.float32).to(self.device)
+            side_info = self.get_side_info(observed_tp, cond_mask)
+            samples = self.__impute(observed_data, cond_mask, side_info, n_samples)
+            samples = samples * (1 - cond_mask[:, None, :, :]) + observed_data[:, None, :, :] * cond_mask[:, None, :, :]
         return samples
 
     def forward(self, batch, is_train=1):

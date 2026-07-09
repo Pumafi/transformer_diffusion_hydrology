@@ -149,11 +149,12 @@ class Unetdiff_base(nn.Module):
         return imputed_samples
     
     def impute(self, observed_data, cond_mask, n_samples, timestamps=None):
-        observed_data = observed_data.permute(0, 2, 1)
-        cond_mask = cond_mask.permute(0, 2, 1)
-        
-        samples = self.__impute(observed_data, cond_mask, n_samples)
-        samples = samples * (1 - cond_mask[:, None, :, :]) + observed_data[:, None, :, :] * cond_mask[:, None, :, :]
+        with torch.no_grad():
+            observed_data = observed_data.permute(0, 2, 1)
+            cond_mask = cond_mask.permute(0, 2, 1)
+            
+            samples = self.__impute(observed_data, cond_mask, n_samples)
+            samples = samples * (1 - cond_mask[:, None, :, :]) + observed_data[:, None, :, :] * cond_mask[:, None, :, :]
 
         return samples
 

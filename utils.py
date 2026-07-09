@@ -211,7 +211,7 @@ def calc_quantile_CRPS_sum(target, forecast, eval_points, mean_scaler, scaler):
         CRPS += q_loss / denom
     return CRPS.item() / len(quantiles)
 
-def evaluate_forecasting(model, test_loader, prediction_horizon=12, nsample=100, scaler=1, mean_scaler=0, foldername="."):
+def evaluate_forecasting(model, test_loader, prediction_horizon=12, nsample=100, scaler=1, mean_scaler=0):
 
     with torch.no_grad():
         try:
@@ -302,29 +302,11 @@ def evaluate_forecasting(model, test_loader, prediction_horizon=12, nsample=100,
                     },
                     refresh=True,
                 )
-
-            with open(
-                foldername + "/generated_outputs_nsample" + str(nsample)  + "forecasting" + str(prediction_horizon) + ".pk", "wb"
-            ) as f:
-                # Save results
-                all_target = torch.cat(all_target, dim=0)
-                all_evalpoint = torch.cat(all_evalpoint, dim=0)
-                all_observed_point = torch.cat(all_observed_point, dim=0)
-                all_observed_time = torch.cat(all_observed_time, dim=0)
-                all_generated_samples = torch.cat(all_generated_samples, dim=0)
-
-                pickle.dump(
-                    [
-                        all_generated_samples,
-                        all_target,
-                        all_evalpoint,
-                        all_observed_point,
-                        all_observed_time,
-                        scaler,
-                        mean_scaler,
-                    ],
-                    f,
-                )
+            all_target = torch.cat(all_target, dim=0)
+            all_evalpoint = torch.cat(all_evalpoint, dim=0)
+            all_observed_point = torch.cat(all_observed_point, dim=0)
+            all_observed_time = torch.cat(all_observed_time, dim=0)
+            all_generated_samples = torch.cat(all_generated_samples, dim=0)
 
             CRPS = calc_quantile_CRPS(
                 all_target, all_generated_samples, all_evalpoint, mean_scaler, scaler
@@ -341,7 +323,7 @@ def evaluate_forecasting(model, test_loader, prediction_horizon=12, nsample=100,
         "CRPS_sum": CRPS_sum
     }
 
-def evaluate_imputation(model, test_loader, seed, nsample=100, scaler=1, mean_scaler=0, ratio_missing=0.25, foldername="."):
+def evaluate_imputation(model, test_loader, seed, nsample=100, scaler=1, mean_scaler=0, ratio_missing=0.25):
 
     with torch.no_grad():
         try:
@@ -440,30 +422,11 @@ def evaluate_imputation(model, test_loader, seed, nsample=100, scaler=1, mean_sc
                     },
                     refresh=True,
                 )
-
-            with open(
-                foldername + "/generated_outputs_nsample" + str(nsample) + "imputation" + str(ratio_missing) + ".pk", "wb"
-            ) as f:
-                # Save results
-                all_target = torch.cat(all_target, dim=0)
-                all_evalpoint = torch.cat(all_evalpoint, dim=0)
-                all_observed_point = torch.cat(all_observed_point, dim=0)
-                all_observed_time = torch.cat(all_observed_time, dim=0)
-                all_generated_samples = torch.cat(all_generated_samples, dim=0)
-
-                pickle.dump(
-                    [
-                        all_generated_samples,
-                        all_target,
-                        all_evalpoint,
-                        all_observed_point,
-                        all_observed_time,
-                        scaler,
-                        mean_scaler,
-                    ],
-                    f,
-                )
-
+            all_target = torch.cat(all_target, dim=0)
+            all_evalpoint = torch.cat(all_evalpoint, dim=0)
+            all_observed_point = torch.cat(all_observed_point, dim=0)
+            all_observed_time = torch.cat(all_observed_time, dim=0)
+            all_generated_samples = torch.cat(all_generated_samples, dim=0)
             CRPS = calc_quantile_CRPS(
                 all_target, all_generated_samples, all_evalpoint, mean_scaler, scaler
             )
@@ -560,7 +523,7 @@ def plot_single_imputation_results(generated_test, mask, num_features=3, station
         plt.tight_layout()
         plt.show()
 
-def multivariate_visualize(dataind, generated, real_data, observed_mask, observed_mask_forecast):
+def multivariate_visualize(dataind, generated, real_data, observed_mask, observed_mask_forecast, parameter_names=None):
     """
     Preprocesses the model outputs and generates the multi-variate visualization grid.
     """
@@ -612,6 +575,11 @@ def multivariate_visualize(dataind, generated, real_data, observed_mask, observe
         ax.plot(time_steps[eval_mask], target_slice[eval_mask], color='b', marker='o', linestyle='None')
         ax.plot(time_steps[given_mask], target_slice[given_mask], color='r', marker='x', linestyle='None')
 
+        if parameter_names and k < len(parameter_names):
+            ax.set_title(f"{parameter_names[k]}")
+        elif parameter_names and k < len(parameter_names):
+            ax.set_title(parameter_names[k])
+
         # Clean axis labels
         if col == 0:
             ax.set_ylabel('value')
@@ -620,3 +588,11 @@ def multivariate_visualize(dataind, generated, real_data, observed_mask, observe
 
     plt.tight_layout()
     return fig, axes
+
+def load_meta_data(path_list_dates = '../data/ope_andra/dates_50.csv', path_sagd_parameters = '../data/ope_andra/sagd_parameters_50_hte.csv'):
+    dates_data = np.loadtxt(path_list_dates, dtype=str, delimiter=',')
+
+    sagd_parameters_data = np.loadtxt(path_sagd_parameters, dtype=str, delimiter=',')
+
+
+    return dates_data, sagd_parameters_data

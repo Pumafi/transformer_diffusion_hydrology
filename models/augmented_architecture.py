@@ -5,14 +5,52 @@ import math
 from linear_attention_transformer import LinearAttentionTransformer
 
 class RMSNorm(nn.Module):
+    """
+    Root Mean Square Normalization (RMSNorm).
+    Reference:
+        https://arxiv.org/abs/1910.07467
+    RMSNorm normalizes each input vector by its root mean square (RMS)
+    value instead of using both mean and variance as in LayerNorm.
+    This reduces computational cost while preserving training stability.
+    Given an input vector x of dimension d:
+        RMS(x) = sqrt((1/d) * sum(x_i^2))
+        y = scale * (x / (RMS(x) + eps)) + bias
+    where `scale` and `bias` are learnable parameters.
+    """
+
     def __init__(self, dim, eps=1e-8):
+        """
+        Args:
+            dim (int):
+                Size of the last dimension to normalize.
+            eps (float, optional):
+                Small constant added to the denominator for numerical
+                stability. Default is 1e-8.
+        """
         super().__init__()
         self.eps = eps
+        # Learnable gain parameter applied after normalization.
         self.scale = nn.Parameter(torch.ones(dim))
+        # Optional learnable bias term.
         self.bias = nn.Parameter(torch.zeros(dim))
 
     def forward(self, x):
-        norm = x.norm(2, dim=-1, keepdim=True) * (1.0 / math.sqrt(x.shape[-1]))
+        """
+        Apply RMS normalization to the input tensor.
+        Args:
+            x (torch.Tensor):
+                Input tensor of shape (..., dim).
+        Returns:
+            torch.Tensor:
+                Normalized tensor with the same shape as `x`.
+        """
+        # Compute RMS over the last dimension:
+        # sqrt(mean(x^2))
+        norm = x.norm(2, dim=-1, keepdim=True) * (
+            1.0 / math.sqrt(x.shape[-1])
+        )
+
+        # Normalize and apply affine transformation.
         return self.scale * x / (norm + self.eps) + self.bias
 
 
@@ -69,6 +107,10 @@ class DiffusionEmbedding(nn.Module):
 
 
 class Augmented_Arch_Model(nn.Module):
+    """
+    Augmented Architecture. Based on CSDI, this is our custom architecture
+    WITH covariates.
+    """
     def __init__(self, config, inputdim=2):
         super().__init__()
         self.channels = config["channels"]

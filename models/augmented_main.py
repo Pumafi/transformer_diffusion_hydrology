@@ -55,6 +55,12 @@ class TimeEmbedding(nn.Module):
 
 
 class Augmented_CSDI_base(nn.Module):
+    """
+    Augmented Model. Based on CSDI, this is our custom architecture
+    WITH covariates.
+
+    Use impute() to generate new simulations
+    """
     def __init__(self, target_dim, config, device):
         super().__init__()
         self.device = device
@@ -81,9 +87,6 @@ class Augmented_CSDI_base(nn.Module):
         self.emb_total_dim = self.emb_time_dim + self.emb_feature_dim + len(self.cycles_alphas) * 2 #+ self.emb_feature_dim + self.number_of_covariates
         if self.is_unconditional == False:
             self.emb_total_dim += 2  # for conditional mask
-        #self.embed_layer = nn.Embedding(
-        #    num_embeddings=self.target_dim, embedding_dim=self.emb_feature_dim
-        #)
 
         config_diff = config["diffusion"]
         config_diff["side_dim"] = self.emb_total_dim
@@ -160,8 +163,6 @@ class Augmented_CSDI_base(nn.Module):
         
         observed_data = observed_data.unsqueeze(1) * side_mask  # (B,1,K,L)
 
-        #covariates = covariates.permute(0, 2, 1).unsqueeze(2).expand(-1, -1, K, -1)  # (B,1,covK,L)
-
         side_info = torch.cat([observed_data, side_mask, time_embed, feature_embed], dim=1)
 
         return side_info
@@ -197,7 +198,6 @@ class Augmented_CSDI_base(nn.Module):
         total_initial_input = self.set_input_to_diffmodel(noisy_data, observed_data, cond_mask) # (B,3,K,L)
         initial_predicted = self.diffmodel(total_initial_input, side_info, covariates, t)  
         
-        # Prior ==> Same as noise
         target_mask = observed_mask - cond_mask # only compute on values known
         residual_prior = (initial_predicted * target_mask) - (noise * target_mask)
         num_eval_prior = target_mask.sum()
@@ -263,14 +263,15 @@ class Augmented_CSDI_base(nn.Module):
         return imputed_samples
     
     def impute(self, observed_data, cond_mask, covariates, n_samples, timestamps=None):
-        observed_tp = timestamps if timestamps is not None else np.tile(np.arange(observed_data.shape[1]), (observed_data.shape[0], 1))
-        observed_data = observed_data.permute(0, 2, 1)
-        cond_mask = cond_mask.permute(0, 2, 1)
-        
-        observed_tp = torch.tensor(observed_tp, dtype=torch.float32).to(self.device)
-        side_info = self.get_side_info(observed_data, observed_tp, cond_mask)
-        samples = self.__impute(observed_data, cond_mask, covariates, side_info, n_samples)
-        samples = samples * (1 - cond_mask[:, None, :, :]) + observed_data[:, None, :, :] * cond_mask[:, None, :, :]
+        with torch.no_grad():
+            observed_tp = timestamps if timestamps is not None else np.tile(np.arange(observed_data.shape[1]), (observed_data.shape[0], 1))
+            observed_data = observed_data.permute(0, 2, 1)
+            cond_mask = cond_mask.permute(0, 2, 1)
+            
+            observed_tp = torch.tensor(observed_tp, dtype=torch.float32).to(self.device)
+            side_info = self.get_side_info(observed_data, observed_tp, cond_mask)
+            samples = self.__impute(observed_data, cond_mask, covariates, side_info, n_samples)
+            samples = samples * (1 - cond_mask[:, None, :, :]) + observed_data[:, None, :, :] * cond_mask[:, None, :, :]
         return samples
 
 
@@ -330,9 +331,6 @@ class Augmented_CSDI_WaterQual(Augmented_CSDI_base):
         observed_tp = batch["timepoints"].to(self.device).float()
         gt_mask = batch["gt_mask"].to(self.device).float()
         covariates = batch["covariates"].to(self.device).float()
-
-        #cut_length = batch["cut_length"].to(self.device).long()
-        #for_pattern_mask = batch["hist_mask"].to(self.device).float()
 
         observed_data = observed_data.permute(0, 2, 1)
         observed_mask = observed_mask.permute(0, 2, 1)

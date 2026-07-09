@@ -43,11 +43,9 @@ class TimeEmbedding(nn.Module):
         # Learnable cycles
         cycles = self.get_cycles()
         if cycles is not None:
-            feats = []
-            for alpha in cycles:
-                feats.append(torch.sin(2 * math.pi * position / alpha))
-                feats.append(torch.cos(2 * math.pi * position / alpha))
-            feats = torch.cat(feats, dim=-1)
+            alphas = position.new_tensor(cycles)                  # (C,)
+            angles = 2 * math.pi * position / alphas              # (..., 1) / (C,) -> (..., C)
+            feats = torch.stack([torch.sin(angles), torch.cos(angles)], dim=-1).flatten(-2)
             pe = torch.cat([pe, feats], dim=-1)
 
         return pe
@@ -253,14 +251,15 @@ class Custom_CSDI_base(nn.Module):
         return imputed_samples
     
     def impute(self, observed_data, cond_mask, n_samples, timestamps=None):
-        observed_tp = timestamps if timestamps is not None else np.tile(np.arange(observed_data.shape[1]), (observed_data.shape[0], 1))
-        observed_data = observed_data.permute(0, 2, 1)
-        cond_mask = cond_mask.permute(0, 2, 1)
-        
-        observed_tp = torch.tensor(observed_tp, dtype=torch.float32).to(self.device)
-        side_info = self.get_side_info(observed_data, observed_tp, cond_mask)
-        samples = self.__impute(observed_data, cond_mask, side_info, n_samples)
-        samples = samples * (1 - cond_mask[:, None, :, :]) + observed_data[:, None, :, :] * cond_mask[:, None, :, :]
+        with torch.no_grad():
+            observed_tp = timestamps if timestamps is not None else np.tile(np.arange(observed_data.shape[1]), (observed_data.shape[0], 1))
+            observed_data = observed_data.permute(0, 2, 1)
+            cond_mask = cond_mask.permute(0, 2, 1)
+            
+            observed_tp = torch.tensor(observed_tp, dtype=torch.float32).to(self.device)
+            side_info = self.get_side_info(observed_data, observed_tp, cond_mask)
+            samples = self.__impute(observed_data, cond_mask, side_info, n_samples)
+            samples = samples * (1 - cond_mask[:, None, :, :]) + observed_data[:, None, :, :] * cond_mask[:, None, :, :]
         return samples
 
 

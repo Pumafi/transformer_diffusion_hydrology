@@ -1,25 +1,25 @@
 
 #type: args
 
-train:
-  epochs: 100
-  batch_size: 16
-  lr: 1.0e-3
-  itr_per_epoch: 1.0e+8
+train: # Training parameters
+  epochs: 100 # Number of time the model is trained on the whole dataset
+  batch_size: 16 # Number of elements of data-points to train the model at one iteration (batch size)
+  lr: 1.0e-3 # learning rate
+  itr_per_epoch: 1.0e+8 # to set a maximum of iteration per epoch if you want shorter training (won't see all data set in an epoch)
 
 
-diffusion:
+diffusion: # Architecture & diffusion parameters
   layers: 4 
   channels: 64 
   nheads: 8
   diffusion_embedding_dim: 128
   beta_start: 0.0001
   beta_end: 0.5
-  num_steps: 100
-  schedule: "quad"
+  num_steps: 50 # number of diffusion steps
+  schedule: "quad" # diffusion schedule
   is_linear: False
 
-model:
+model: # Other model parameters
   is_unconditional: 0
   timeemb: 16
   featureemb: 16
@@ -27,5 +27,5 @@ model:
   step_size_in_hours: 4.0
   learnable_cyle_in_days: [0.5, 1.0, 2.0, 7.0, 30.0, 90.0, 182.0, 365.0]
 
-data:
+data: # Nb of covariates
   number_of_covariates: 72
