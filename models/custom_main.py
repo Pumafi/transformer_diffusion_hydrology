@@ -67,7 +67,7 @@ class Custom_CSDI_base(nn.Module):
                                             learnable_cycles=self.cycles_alphas,
                                             min_alpha=self.cycles_alphas[0] // 2,
                                             max_alpha=self.cycles_alphas[-1] * 2,
-                                            device="cuda")
+                                            device=device)
         
         self.embed_layer = nn.Embedding(
             num_embeddings=self.target_dim, embedding_dim=self.emb_feature_dim
